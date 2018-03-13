@@ -124,7 +124,8 @@ def define_G(input_nc, output_nc, ngf, which_model_netG, norm='batch', use_dropo
 
 
 def define_D(input_nc, ndf, which_model_netD,
-             n_layers_D=3, norm='batch', use_sigmoid=False, init_type='normal', gpu_ids=[]):
+             n_layers_D=3, norm='batch', use_sigmoid=False, init_type='normal',
+             gpu_ids=[], fourier_mode=None):
     netD = None
     use_gpu = len(gpu_ids) > 0
     norm_layer = get_norm_layer(norm_type=norm)
@@ -138,7 +139,7 @@ def define_D(input_nc, ndf, which_model_netD,
     elif which_model_netD == 'pixel':
         netD = PixelDiscriminator(input_nc, ndf, norm_layer=norm_layer, use_sigmoid=use_sigmoid, gpu_ids=gpu_ids)
     elif which_model_netD == 'fourier':
-        netD = NLayerFourierDiscriminator(input_nc, ndf, n_layers_D, norm_layer=norm_layer, use_sigmoid=use_sigmoid, gpu_ids=gpu_ids)
+        netD = NLayerFourierDiscriminator(fourier_mode, input_nc, ndf, n_layers_D, norm_layer=norm_layer, use_sigmoid=use_sigmoid, gpu_ids=gpu_ids)
     else:
         raise NotImplementedError('Discriminator model name [%s] is not recognized' %
                                   which_model_netD)
@@ -387,8 +388,9 @@ class UnetSkipConnectionBlock(nn.Module):
 # Defines the FourierPatchGAN discriminator with the specified arguments.
 class NLayerFourierDiscriminator(nn.Module):
 
-    def __init__(self, input_nc, ndf=64, n_layers=3, norm_layer=nn.BatchNorm2d, use_sigmoid=False, gpu_ids=[]):
+    def __init__(self, fourier_mode, input_nc, ndf=64, n_layers=3, norm_layer=nn.BatchNorm2d, use_sigmoid=False, gpu_ids=[]):
         super(NLayerFourierDiscriminator, self).__init__()
+        self.fourier_mode = fourier_mode
         self.gpu_ids = gpu_ids
         if type(norm_layer) == functools.partial:
             use_bias = norm_layer.func == nn.InstanceNorm2d
@@ -397,9 +399,14 @@ class NLayerFourierDiscriminator(nn.Module):
 
         kw = 4
         padw = 1
+        to_add = 0
         # we add 3 channel to input_nc because we are gonna concat the fourier real to input
+        if self.fourier_mode == 'real_only':
+            to_add = 3
+        elif self.fourier_mode == 'real_and_complex' or self.fourier_mode == 'power_spectrum':
+            to_add = 6
         sequence = [
-            nn.Conv2d(input_nc + 3, ndf, kernel_size=kw, stride=2, padding=padw),
+            nn.Conv2d(input_nc + to_add, ndf, kernel_size=kw, stride=2, padding=padw),
             nn.LeakyReLU(0.2, True)
         ]
 
@@ -437,9 +444,23 @@ class NLayerFourierDiscriminator(nn.Module):
         # fft
         if self.complex_zeroes is None:
             self.complex_zeroes = torch.autograd.Variable(torch.zeros(*input.size()).cuda(), requires_grad=False)
-        fourier, _ = self.fft(input, self.complex_zeroes)
-        # concat input to fourier
-        input = torch.cat((input, fourier), dim=1)
+
+        if self.fourier_mode == 'real_only':
+            fourier, _ = self.fft(input, self.complex_zeroes)
+            # concat real fourier to input
+            input = torch.cat((input, fourier), dim=1)
+        elif self.fourier_mode == 'real_and_complex':
+            real, complex = self.fft(input, self.complex_zeroes)
+            # concat real and complex fourier to input
+            input = torch.cat((input, real, complex), dim=1)
+        elif self.fourier_mode == 'power_spectrum':
+            real, complex = self.fft(input, self.complex_zeroes)
+            # concat abs of real and complex fourier to input
+            real = torch.abs(real)
+            complex = torch.abs(complex)
+            input = torch.cat((input, real, complex), dim=1)
+        else:
+            raise Exception('Bad --fourier_mode: {}'.format(self.fourier_mode))
 
         if len(self.gpu_ids) and isinstance(input.data, torch.cuda.FloatTensor):
             return nn.parallel.data_parallel(self.model, input, self.gpu_ids)
