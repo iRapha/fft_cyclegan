@@ -401,9 +401,9 @@ class NLayerFourierDiscriminator(nn.Module):
         padw = 1
         to_add = 0
         # we add 3 channel to input_nc because we are gonna concat the fourier real to input
-        if self.fourier_mode == 'real_only':
+        if self.fourier_mode == 'real_only' or self.fourier_mode == 'power_spectrum':
             to_add = 3
-        elif self.fourier_mode == 'real_and_complex' or self.fourier_mode == 'power_spectrum':
+        elif self.fourier_mode == 'real_and_complex':
             to_add = 6
         sequence = [
             nn.Conv2d(input_nc + to_add, ndf, kernel_size=kw, stride=2, padding=padw),
@@ -456,9 +456,10 @@ class NLayerFourierDiscriminator(nn.Module):
         elif self.fourier_mode == 'power_spectrum':
             real, complex = self.fft(input, self.complex_zeroes)
             # concat abs of real and complex fourier to input
-            real = torch.abs(real)
-            complex = torch.abs(complex)
-            input = torch.cat((input, real, complex), dim=1)
+            real = real.pow(2)
+            complex = complex.pow(2)
+            fourier = (real + complex).pow(0.5)
+            input = torch.cat((input, fourier), dim=1)
         else:
             raise Exception('Bad --fourier_mode: {}'.format(self.fourier_mode))
 
