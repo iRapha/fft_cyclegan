@@ -1,0 +1,36 @@
+# FourierGAN
+python train.py --dataroot ./datasets/maps --name maps_fullyfouriergan --model cycle_gan --no_dropout --display_id 0 --which_model_netD fourier --batchSize 4
+
+# Fully FourierGAN
+python train.py --dataroot ./datasets/maps --name maps_fullyfouriergan --model cycle_gan --no_dropout --display_id 0 --which_model_netD fourier --batchSize 4 --fourier_mode=real_and_complex
+
+# Power FourierGAN
+python train.py --dataroot ./datasets/maps --name maps_powerfouriergan --model cycle_gan --no_dropout --display_id 0 --which_model_netD fourier --batchSize 4 --fourier_mode=power_spectrum
+
+# FourierGAN small LambdaA
+python train.py --dataroot ./datasets/maps --name maps_fouriergan_smallLA --model cycle_gan --no_dropout --display_id 0 --which_model_netD fourier --batchSize 4 --fourier_mode=real_only --lambda_A=1 
+
+# FourierGAN small LambdaA and LambdaB
+python train.py --dataroot ./datasets/maps --name maps_fouriergan_smallLALB --model cycle_gan --no_dropout --display_id 0 --which_model_netD fourier --batchSize 4 --fourier_mode=real_only --lambda_A=1 --lambda_B=1
+
+# CycleGAN small LambdaA
+python train.py --dataroot ./datasets/maps --name maps_cyclegan_smallLA --model cycle_gan --no_dropout --display_id 0 --batchSize 4 --lambda_A=1
+
+# CycleGAN small LambdaA and LambdaB
+python train.py --dataroot ./datasets/maps --name maps_cyclegan_smallLALB --model cycle_gan --no_dropout --display_id 0 --batchSize 4 --lambda_A=1 --lambda_B=1
+
+# Fully FourierGAN with small LambdaA
+python train.py --dataroot ./datasets/maps --name maps_fullyfouriergan_smallLA --model cycle_gan --no_dropout --display_id 0 --which_model_netD fourier --batchSize 4 --fourier_mode=real_and_complex --lambda_A=1
+
+# FourierGAN lambdaA5
+python train.py --dataroot ./datasets/maps --name maps_fouriergan_LA5 --model cycle_gan --no_dropout --display_id 0 --which_model_netD fourier --batchSize 4 --fourier_mode=real_only --lambda_A=5
+
+# CycleGAN lambdaA5
+python train.py --dataroot ./datasets/maps --name maps_cyclegan_LA5 --model cycle_gan --no_dropout --display_id 0 --batchSize 4 --lambda_A=5
+
+# Purely FFT (real and complex)
+python train.py --dataroot ./datasets/maps --name maps_fouriergan_purefft --model cycle_gan --no_dropout --display_id 0 --which_model_netD fourier --batchSize 4 --fourier_mode=real_complex_pure
+
+# TEST
+python test.py --dataroot ./datasets/maps --name <exp name> --model cycle_gan --phase test --no_dropout --which_model_netD fourier --fourier_mode=<which mode> [MORE OPTIONS]
+
