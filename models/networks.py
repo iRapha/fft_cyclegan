@@ -264,13 +264,15 @@ class ResnetGenerator(nn.Module):
 class VariationalLayer(nn.Module):
 
     def __init__(self, ngf, output_nc, kernel_size=7, padding=0):
+        super(VariationalLayer, self).__init__()
         # TODO: i have never seen an implementation of variational trick where
         # the layers that output mu and var are convolutional. But in this
         # scenario it doesnt make sense to flatten the image and unflatten it.
         # Our embedding has the special property of being spatially semantic...
-        self.conv_mu = nn.Conv2d(ngf, output_nc, kernel_size=7, padding=0)
-        self.conv_logvar = nn.Conv2d(ngf, output_nc, kernel_size=7, padding=0)
+        self.conv_mu = nn.Conv2d(ngf, output_nc, kernel_size=kernel_size, padding=padding)
+        self.conv_logvar = nn.Conv2d(ngf, output_nc, kernel_size=kernel_size, padding=padding)
         self.random_size = None
+        self.random_type = None
 
     def forward(self, input):
         mu = self.conv_mu(input)
@@ -281,7 +283,8 @@ class VariationalLayer(nn.Module):
     def reparameterize(self, mu, logvar):
         if self.random_size is None:
             self.random_size = logvar.size()
-        eps = Variable(torch.FloatTensor(self.random_size).normal_())
+            self.random_type = type(logvar.data)
+        eps = Variable(self.random_type(self.random_size).normal_())
         std = logvar.mul(0.5).exp_()
         return eps.mul(std).add_(mu)
 
@@ -289,7 +292,7 @@ class VariationalLayer(nn.Module):
 class VariationalResnetGenerator(nn.Module):
     def __init__(self, input_nc, output_nc, ngf=64, norm_layer=nn.BatchNorm2d, use_dropout=False, n_blocks=6, gpu_ids=[], padding_type='reflect'):
         assert(n_blocks >= 0)
-        super(ResnetGenerator, self).__init__()
+        super(VariationalResnetGenerator, self).__init__()
         self.input_nc = input_nc
         self.output_nc = output_nc
         self.ngf = ngf
