@@ -31,6 +31,13 @@ python train.py --dataroot ./datasets/maps --name maps_cyclegan_LA5 --model cycl
 # Purely FFT (real and complex)
 python train.py --dataroot ./datasets/maps --name maps_fouriergan_purefft --model cycle_gan --no_dropout --display_id 0 --which_model_netD fourier --batchSize 4 --fourier_mode=real_complex_pure
 
+# BatchNormGAN
+python train.py --dataroot ./datasets/maps --name maps_bngan --model cycle_gan --no_dropout --display_id 0 --which_model_netD fourier --batchSize 4 --fourier_mode=batch_norm
+
+# Pure Fully Fourier ImageGAN
+python train.py --dataroot ./datasets/maps --name maps_purefullyfourierimagegan --model cycle_gan --no_dropout --display_id 0 --which_model_netD fourier --batchSize 4 --fourier_mode=real_complex_pure --n_layers_D=5
+
+
 # TEST
 python test.py --dataroot ./datasets/maps --name <exp name> --model cycle_gan --phase test --no_dropout --which_model_netD fourier --fourier_mode=<which mode> [MORE OPTIONS]
 

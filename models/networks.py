@@ -405,6 +405,9 @@ class NLayerFourierDiscriminator(nn.Module):
             to_add = 3
         elif self.fourier_mode == 'real_and_complex':
             to_add = 6
+        elif self.fourier_mode == 'batch_norm':
+            to_add = 0
+            self.bn = torch.nn.BatchNorm2d(3)
         sequence = [
             nn.Conv2d(input_nc + to_add, ndf, kernel_size=kw, stride=2, padding=padw),
             nn.LeakyReLU(0.2, True)
@@ -464,6 +467,8 @@ class NLayerFourierDiscriminator(nn.Module):
             real, complex = self.fft(input, self.complex_zeroes)
             # concat real and complex fourier to input
             input = torch.cat((real, complex), dim=1)
+        elif self.fourier_mode == 'batch_norm':
+            input = self.bn(input)
         else:
             raise Exception('Bad --fourier_mode: {}'.format(self.fourier_mode))
 
