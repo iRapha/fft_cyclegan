@@ -332,6 +332,7 @@ class VariationalResnetGenerator(nn.Module):
         # VariationalLayer wrt Gaussian. I'm not sure how much that makes sense
         # here, since our outputs arent Gaussian, so I guess our first
         # experiment won't include it?
+        # https://github.com/episodeyang/variational_autoencoder_pytorch
         model += [nn.Tanh()]
 
         self.model = nn.Sequential(*model)
