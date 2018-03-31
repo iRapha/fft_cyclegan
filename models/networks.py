@@ -443,7 +443,14 @@ class NLayerFourierDiscriminator(nn.Module):
     def forward(self, input):
         # fft
         if self.complex_zeroes is None:
+            self.og_input_size = input.size()
             self.complex_zeroes = torch.autograd.Variable(torch.zeros(*input.size()).cuda(), requires_grad=False)
+        else:
+            try:
+                assert self.og_input_size == input.size()
+            except AssertionError:
+                print(input.size())
+                print(self.og_input_size)
 
         if self.fourier_mode == 'real_only':
             fourier, _ = self.fft(input, self.complex_zeroes)
