@@ -1,4 +1,5 @@
 #!/usr/bin/env wolframscript
+#Note that on MacOS path is /Applications/Mathematica.app/Contents/MacOS/MathKernel
 (* ::Package:: *)
 
 path = $ScriptCommandLine[[2]];
