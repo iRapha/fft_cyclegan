@@ -115,6 +115,8 @@ def define_G(input_nc, output_nc, ngf, which_model_netG, norm='batch', use_dropo
         netG = UnetGenerator(input_nc, output_nc, 7, ngf, norm_layer=norm_layer, use_dropout=use_dropout, gpu_ids=gpu_ids)
     elif which_model_netG == 'unet_256':
         netG = UnetGenerator(input_nc, output_nc, 8, ngf, norm_layer=norm_layer, use_dropout=use_dropout, gpu_ids=gpu_ids)
+    elif which_model_netG == 'variational_resnet_9blocks':
+        netG = VariationalResnetGenerator(input_nc, output_nc, ngf, norm_layer=norm_layer, use_dropout=use_dropout, n_blocks=9, gpu_ids=gpu_ids)
     else:
         raise NotImplementedError('Generator model name [%s] is not recognized' % which_model_netG)
     if len(gpu_ids) > 0:
@@ -248,6 +250,92 @@ class ResnetGenerator(nn.Module):
                       nn.ReLU(True)]
         model += [nn.ReflectionPad2d(3)]
         model += [nn.Conv2d(ngf, output_nc, kernel_size=7, padding=0)]
+        model += [nn.Tanh()]
+
+        self.model = nn.Sequential(*model)
+
+    def forward(self, input):
+        if self.gpu_ids and isinstance(input.data, torch.cuda.FloatTensor):
+            return nn.parallel.data_parallel(self.model, input, self.gpu_ids)
+        else:
+            return self.model(input)
+
+
+class VariationalLayer(nn.Module):
+
+    def __init__(self, ngf, output_nc, kernel_size=7, padding=0):
+        super(VariationalLayer, self).__init__()
+        # TODO: i have never seen an implementation of variational trick where
+        # the layers that output mu and var are convolutional. But in this
+        # scenario it doesnt make sense to flatten the image and unflatten it.
+        # Our embedding has the special property of being spatially semantic...
+        self.conv_mu = nn.Conv2d(ngf, output_nc, kernel_size=kernel_size, padding=padding)
+        self.conv_logvar = nn.Conv2d(ngf, output_nc, kernel_size=kernel_size, padding=padding)
+        self.random_size = None
+        self.random_type = None
+
+    def forward(self, input):
+        mu = self.conv_mu(input)
+        logvar = self.conv_logvar(input)
+        z = self.reparameterize(mu, logvar)
+        return z #, mu, logvar # this is to be included when we are doing KL loss.
+
+    def reparameterize(self, mu, logvar):
+        if self.random_size is None:
+            self.random_size = logvar.size()
+            self.random_type = type(logvar.data)
+        eps = Variable(self.random_type(self.random_size).normal_())
+        std = logvar.mul(0.5).exp_()
+        return eps.mul(std).add_(mu)
+
+
+class VariationalResnetGenerator(nn.Module):
+    def __init__(self, input_nc, output_nc, ngf=64, norm_layer=nn.BatchNorm2d, use_dropout=False, n_blocks=6, gpu_ids=[], padding_type='reflect'):
+        assert(n_blocks >= 0)
+        super(VariationalResnetGenerator, self).__init__()
+        self.input_nc = input_nc
+        self.output_nc = output_nc
+        self.ngf = ngf
+        self.gpu_ids = gpu_ids
+        if type(norm_layer) == functools.partial:
+            use_bias = norm_layer.func == nn.InstanceNorm2d
+        else:
+            use_bias = norm_layer == nn.InstanceNorm2d
+
+        model = [nn.ReflectionPad2d(3),
+                 nn.Conv2d(input_nc, ngf, kernel_size=7, padding=0,
+                           bias=use_bias),
+                 norm_layer(ngf),
+                 nn.ReLU(True)]
+
+        n_downsampling = 2
+        for i in range(n_downsampling):
+            mult = 2**i
+            model += [nn.Conv2d(ngf * mult, ngf * mult * 2, kernel_size=3,
+                                stride=2, padding=1, bias=use_bias),
+                      norm_layer(ngf * mult * 2),
+                      nn.ReLU(True)]
+
+        mult = 2**n_downsampling
+        for i in range(n_blocks):
+            model += [ResnetBlock(ngf * mult, padding_type=padding_type, norm_layer=norm_layer, use_dropout=use_dropout, use_bias=use_bias)]
+
+        for i in range(n_downsampling):
+            mult = 2**(n_downsampling - i)
+            model += [nn.ConvTranspose2d(ngf * mult, int(ngf * mult / 2),
+                                         kernel_size=3, stride=2,
+                                         padding=1, output_padding=1,
+                                         bias=use_bias),
+                      norm_layer(int(ngf * mult / 2)),
+                      nn.ReLU(True)]
+        model += [nn.ReflectionPad2d(3)]
+        model += [VariationalLayer(ngf, output_nc, kernel_size=7, padding=0)]
+        # TODO: Variational Layers usually involve a variational loss
+        # which I balieve is the KL divergence of the output of the
+        # VariationalLayer wrt Gaussian. I'm not sure how much that makes sense
+        # here, since our outputs arent Gaussian, so I guess our first
+        # experiment won't include it?
+        # https://github.com/episodeyang/variational_autoencoder_pytorch
         model += [nn.Tanh()]
 
         self.model = nn.Sequential(*model)
@@ -405,6 +493,9 @@ class NLayerFourierDiscriminator(nn.Module):
             to_add = 3
         elif self.fourier_mode == 'real_and_complex':
             to_add = 6
+        elif self.fourier_mode == 'batch_norm':
+            to_add = 0
+            self.bn = torch.nn.BatchNorm2d(3)
         sequence = [
             nn.Conv2d(input_nc + to_add, ndf, kernel_size=kw, stride=2, padding=padw),
             nn.LeakyReLU(0.2, True)
@@ -471,6 +562,8 @@ class NLayerFourierDiscriminator(nn.Module):
             real, complex = self.fft(input, self.complex_zeroes)
             # concat real and complex fourier to input
             input = torch.cat((real, complex), dim=1)
+        elif self.fourier_mode == 'batch_norm':
+            input = self.bn(input)
         else:
             raise Exception('Bad --fourier_mode: {}'.format(self.fourier_mode))
 
