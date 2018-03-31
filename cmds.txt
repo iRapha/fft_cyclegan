@@ -37,6 +37,9 @@ python train.py --dataroot ./datasets/maps --name maps_bngan --model cycle_gan -
 # Pure Fully Fourier ImageGAN
 python train.py --dataroot ./datasets/maps --name maps_purefullyfourierimagegan --model cycle_gan --no_dropout --display_id 0 --which_model_netD fourier --batchSize 4 --fourier_mode=real_complex_pure --n_layers_D=5
 
+# VariationalG GAN
+python train.py --dataroot ./datasets/maps --name maps_variationalggan --model cycle_gan --no_dropout --display_id 0 --which_model_netG variational_resnet_9blocks --batchSize 4
+
 
 # TEST
 python test.py --dataroot ./datasets/maps --name <exp name> --model cycle_gan --phase test --no_dropout --which_model_netD fourier --fourier_mode=<which mode> [MORE OPTIONS]
