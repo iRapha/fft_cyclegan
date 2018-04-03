@@ -49,6 +49,9 @@ python train.py --dataroot ./datasets/maps --name maps_cyclegan_unet256 --model 
 # CycleGAN with UNet128
 python train.py --dataroot ./datasets/maps --name maps_cyclegan_unet128 --model cycle_gan --no_dropout --display_id 0 --batchSize 24 --nThreads 26 --which_model_netG=unet_128
 
+# CycleGAN with UNet256 but without skip connections
+python train.py --dataroot ./datasets/maps --name maps_cyclegan_unet256_noskips --model cycle_gan --no_dropout --display_id 0 --batchSize 32 --nThreads 34 --which_model_netG=unet_256_noskips
+
 
 # TEST
 python test.py --dataroot ./datasets/maps --name <exp name> --model cycle_gan --phase test --no_dropout --which_model_netD fourier --fourier_mode=<which mode> [MORE OPTIONS]
