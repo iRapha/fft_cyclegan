@@ -13,6 +13,10 @@ def create_model(opt):
         assert(opt.dataset_mode == 'single')
         from .test_model import TestModel
         model = TestModel()
+    elif opt.model == 'recycle_gan':
+        assert(opt.dataset_mode == 'unaligned')
+        from .recycle_gan_model import ReCycleGANModel
+        model = ReCycleGANModel()
     else:
         raise ValueError("Model [%s] not recognized." % opt.model)
     model.initialize(opt)

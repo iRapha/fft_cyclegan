@@ -109,6 +109,8 @@ def define_G(input_nc, output_nc, ngf, which_model_netG, norm='batch', use_dropo
 
     if which_model_netG == 'resnet_9blocks':
         netG = ResnetGenerator(input_nc, output_nc, ngf, norm_layer=norm_layer, use_dropout=use_dropout, n_blocks=9, gpu_ids=gpu_ids)
+    if which_model_netG == 'resnet_9blocks_recycle_skips':
+        netG = ReCycledResnetGenerator(input_nc, output_nc, ngf, norm_layer=norm_layer, use_dropout=use_dropout, n_blocks=9, gpu_ids=gpu_ids)
     elif which_model_netG == 'resnet_9blocks_noskips':
         netG = ResnetGeneratorNoSkips(input_nc, output_nc, ngf, norm_layer=norm_layer, use_dropout=use_dropout, n_blocks=9, gpu_ids=gpu_ids)
     elif which_model_netG == 'resnet_6blocks':
@@ -124,6 +126,10 @@ def define_G(input_nc, output_nc, ngf, which_model_netG, norm='batch', use_dropo
     elif which_model_netG == 'variational_resnet_9blocks':
         raise NotImplementedError('this is broken')
         netG = VariationalResnetGenerator(input_nc, output_nc, ngf, norm_layer=norm_layer, use_dropout=use_dropout, n_blocks=9, gpu_ids=gpu_ids)
+    elif which_model_netG == 'discogen':
+        netG = DiscoGenerator()
+    elif which_model_netG == 'discogen_proportional':
+        netG = DiscoGenerator(bottleneck='proportional')
     else:
         raise NotImplementedError('Generator model name [%s] is not recognized' % which_model_netG)
     if len(gpu_ids) > 0:
@@ -318,6 +324,107 @@ class ResnetGenerator(nn.Module):
             return nn.parallel.data_parallel(self.model, input, self.gpu_ids)
         else:
             return self.model(input)
+
+
+class ReCycledResnetGenerator(nn.Module):
+    def __init__(self, input_nc, output_nc, ngf=64, norm_layer=nn.BatchNorm2d, use_dropout=False, n_blocks=6, gpu_ids=[], padding_type='reflect'):
+        assert(n_blocks >= 0)
+        super(ReCycledResnetGenerator, self).__init__()
+        self.input_nc = input_nc
+        self.output_nc = output_nc
+        self.ngf = ngf
+        self.gpu_ids = gpu_ids
+        if type(norm_layer) == functools.partial:
+            use_bias = norm_layer.func == nn.InstanceNorm2d
+        else:
+            use_bias = norm_layer == nn.InstanceNorm2d
+
+        premodel = [nn.ReflectionPad2d(3),
+                 nn.Conv2d(input_nc, ngf, kernel_size=7, padding=0,
+                           bias=use_bias),
+                 norm_layer(ngf),
+                 nn.ReLU(True)]
+
+        n_downsampling = 2
+        for i in range(n_downsampling):
+            mult = 2**i
+            premodel += [nn.Conv2d(ngf * mult, ngf * mult * 2, kernel_size=3,
+                                stride=2, padding=1, bias=use_bias),
+                      norm_layer(ngf * mult * 2),
+                      nn.ReLU(True)]
+
+        model = []
+        mult = 2**n_downsampling
+        for i in range(n_blocks):
+            model += [ReCycledResnetBlock(ngf * mult, padding_type=padding_type, norm_layer=norm_layer, use_dropout=use_dropout, use_bias=use_bias)]
+
+        posmodel = []
+        for i in range(n_downsampling):
+            mult = 2**(n_downsampling - i)
+            posmodel += [nn.ConvTranspose2d(ngf * mult, int(ngf * mult / 2),
+                                         kernel_size=3, stride=2,
+                                         padding=1, output_padding=1,
+                                         bias=use_bias),
+                      norm_layer(int(ngf * mult / 2)),
+                      nn.ReLU(True)]
+        posmodel += [nn.ReflectionPad2d(3)]
+        posmodel += [nn.Conv2d(ngf, output_nc, kernel_size=7, padding=0)]
+        posmodel += [nn.Tanh()]
+
+        self.premodel = nn.Sequential(*premodel)
+        self.model = nn.ModuleList(model)
+        self.posmodel = nn.Sequential(*posmodel)
+
+    def forward(self, input, is_cycle=False):
+        out = self.premodel(input)
+        for resblock in self.model:
+            out = resblock(out, is_cycle)
+        return self.posmodel(out)
+
+
+class ReCycledResnetBlock(nn.Module):
+    def __init__(self, dim, padding_type, norm_layer, use_dropout, use_bias):
+        super(ReCycledResnetBlock, self).__init__()
+        self.conv_block = self.build_conv_block(dim, padding_type, norm_layer, use_dropout, use_bias)
+
+    def build_conv_block(self, dim, padding_type, norm_layer, use_dropout, use_bias):
+        conv_block = []
+        p = 0
+        if padding_type == 'reflect':
+            conv_block += [nn.ReflectionPad2d(1)]
+        elif padding_type == 'replicate':
+            conv_block += [nn.ReplicationPad2d(1)]
+        elif padding_type == 'zero':
+            p = 1
+        else:
+            raise NotImplementedError('padding [%s] is not implemented' % padding_type)
+
+        conv_block += [nn.Conv2d(dim, dim, kernel_size=3, padding=p, bias=use_bias),
+                       norm_layer(dim),
+                       nn.ReLU(True)]
+        if use_dropout:
+            conv_block += [nn.Dropout(0.5)]
+
+        p = 0
+        if padding_type == 'reflect':
+            conv_block += [nn.ReflectionPad2d(1)]
+        elif padding_type == 'replicate':
+            conv_block += [nn.ReplicationPad2d(1)]
+        elif padding_type == 'zero':
+            p = 1
+        else:
+            raise NotImplementedError('padding [%s] is not implemented' % padding_type)
+        conv_block += [nn.Conv2d(dim, dim, kernel_size=3, padding=p, bias=use_bias),
+                       norm_layer(dim)]
+
+        return nn.Sequential(*conv_block)
+
+    def forward(self, x, is_cycle=False):
+        if is_cycle:
+            out = self.conv_block(x) + x.detach()
+        else:
+            out = self.conv_block(x) + x
+        return out
 
 
 class VariationalLayer(nn.Module):
@@ -833,3 +940,115 @@ class PixelDiscriminator(nn.Module):
             return nn.parallel.data_parallel(self.net, input, self.gpu_ids)
         else:
             return self.net(input)
+
+class DiscoGenerator(nn.Module):
+    def __init__(self, bottleneck='same_as_discogan'):
+
+        super(DiscoGenerator, self).__init__()
+
+        ### DISCOGAN GENERATOR with extra layers
+        # (for maintaining bottleneck size) and maintained max 512 channels
+        if bottleneck == 'same_as_discogan':
+            self.main = nn.Sequential(
+                nn.Conv2d(3, 64, 4, 2, 1, bias=False),
+                nn.LeakyReLU(0.2, inplace=True),
+                nn.Conv2d(64, 64 * 2, 4, 2, 1, bias=False),
+                nn.BatchNorm2d(64 * 2),
+                nn.LeakyReLU(0.2, inplace=True),
+                nn.Conv2d(64 * 2, 64 * 4, 4, 2, 1, bias=False),
+                nn.BatchNorm2d(64 * 4),
+                nn.LeakyReLU(0.2, inplace=True),
+                nn.Conv2d(64 * 4, 64 * 8, 4, 2, 1, bias=False),
+                nn.BatchNorm2d(64 * 8),
+                nn.LeakyReLU(0.2, inplace=True),
+
+                # extra downconv layers:
+                nn.Conv2d(64 * 8, 64 * 8, 4, 2, 1, bias=False),
+                nn.BatchNorm2d(64 * 8),
+                nn.LeakyReLU(0.2, inplace=True),
+
+                nn.Conv2d(64 * 8, 64 * 8, 4, 2, 1, bias=False),
+                nn.BatchNorm2d(64 * 8),
+                nn.LeakyReLU(0.2, inplace=True),
+                # bottleneck
+                nn.ConvTranspose2d(64 * 8, 64 * 8, 4, 2, 1, bias=False),
+                nn.BatchNorm2d(64 * 8),
+                nn.ReLU(True),
+
+                nn.ConvTranspose2d(64 * 8, 64 * 8, 4, 2, 1, bias=False),
+                nn.BatchNorm2d(64 * 8),
+                nn.ReLU(True),
+                # end of extra downconv layers
+
+                nn.ConvTranspose2d(64 * 8, 64 * 4, 4, 2, 1, bias=False),
+                nn.BatchNorm2d(64 * 4),
+                nn.ReLU(True),
+                nn.ConvTranspose2d(64 * 4, 64 * 2, 4, 2, 1, bias=False),
+                nn.BatchNorm2d(64 * 2),
+                nn.ReLU(True),
+                nn.ConvTranspose2d(64 * 2,     64, 4, 2, 1, bias=False),
+                nn.BatchNorm2d(64),
+                nn.ReLU(True),
+                nn.ConvTranspose2d(    64,      3, 4, 2, 1, bias=False),
+                nn.Sigmoid()
+            )
+
+
+        if bottleneck == 'proportional':
+            self.main = nn.Sequential(
+                nn.Conv2d(3, 64, 4, 2, 1, bias=False),
+                nn.LeakyReLU(0.2, inplace=True),
+                nn.Conv2d(64, 64 * 2, 4, 2, 1, bias=False),
+                nn.BatchNorm2d(64 * 2),
+                nn.LeakyReLU(0.2, inplace=True),
+                nn.Conv2d(64 * 2, 64 * 4, 4, 2, 1, bias=False),
+                nn.BatchNorm2d(64 * 4),
+                nn.LeakyReLU(0.2, inplace=True),
+                nn.Conv2d(64 * 4, 64 * 8, 4, 2, 1, bias=False),
+                nn.BatchNorm2d(64 * 8),
+                nn.LeakyReLU(0.2, inplace=True),
+                # bottleneck
+                nn.ConvTranspose2d(64 * 8, 64 * 4, 4, 2, 1, bias=False),
+                nn.BatchNorm2d(64 * 4),
+                nn.ReLU(True),
+                nn.ConvTranspose2d(64 * 4, 64 * 2, 4, 2, 1, bias=False),
+                nn.BatchNorm2d(64 * 2),
+                nn.ReLU(True),
+                nn.ConvTranspose2d(64 * 2,     64, 4, 2, 1, bias=False),
+                nn.BatchNorm2d(64),
+                nn.ReLU(True),
+                nn.ConvTranspose2d(    64,      3, 4, 2, 1, bias=False),
+                nn.Sigmoid()
+            )
+
+        ### ORIGINAL DEFAULT DISCOGAN GENERATOR:
+        #  self.main = nn.Sequential(
+            #  nn.Conv2d(3, 64, 4, 2, 1, bias=False),
+            #  nn.LeakyReLU(0.2, inplace=True),
+            #  nn.Conv2d(64, 64 * 2, 4, 2, 1, bias=False),
+            #  nn.BatchNorm2d(64 * 2),
+            #  nn.LeakyReLU(0.2, inplace=True),
+            #  nn.Conv2d(64 * 2, 64 * 4, 4, 2, 1, bias=False),
+            #  nn.BatchNorm2d(64 * 4),
+            #  nn.LeakyReLU(0.2, inplace=True),
+            #  nn.Conv2d(64 * 4, 64 * 8, 4, 2, 1, bias=False),
+            #  nn.BatchNorm2d(64 * 8),
+            #  nn.LeakyReLU(0.2, inplace=True),
+
+            #  nn.ConvTranspose2d(64 * 8, 64 * 4, 4, 2, 1, bias=False),
+            #  nn.BatchNorm2d(64 * 4),
+            #  nn.ReLU(True),
+            #  nn.ConvTranspose2d(64 * 4, 64 * 2, 4, 2, 1, bias=False),
+            #  nn.BatchNorm2d(64 * 2),
+            #  nn.ReLU(True),
+            #  nn.ConvTranspose2d(64 * 2,     64, 4, 2, 1, bias=False),
+            #  nn.BatchNorm2d(64),
+            #  nn.ReLU(True),
+            #  nn.ConvTranspose2d(    64,      3, 4, 2, 1, bias=False),
+            #  nn.Sigmoid()
+        #  )
+
+    def forward(self, input):
+        return self.main( input )
+
+
