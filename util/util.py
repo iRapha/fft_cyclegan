@@ -54,3 +54,19 @@ def mkdirs(paths):
 def mkdir(path):
     if not os.path.exists(path):
         os.makedirs(path)
+
+def get_paths(source, recurse=False):
+    paths = []
+    names = []
+    for path, sub, filenames in os.walk(source):
+        for i, f in enumerate(filenames):
+            names.append(f)
+            paths.append(os.path.join(path, f))
+        if not recurse:
+            break
+
+    return paths, names
+
+def load_image(filename):
+    return Image.open(filename)
+
