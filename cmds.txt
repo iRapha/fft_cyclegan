@@ -58,7 +58,8 @@ python train.py --dataroot ./datasets/maps --name maps_cyclegan_resnet9_noskips 
 # ReCycleGAN (with resnet9 whose skips have stopgrad if cycleloss)
 python train.py --dataroot ./datasets/maps --name maps_cyclegan_recycleskips --model recycle_gan --no_dropout --display_id 0 --batchSize 4 --nThreads 6 --which_model_netG=resnet_9blocks_recycle_skips
 
+# TV GAN
+python train.py --dataroot ./datasets/maps --name maps_tv_test --model tv_gan --no_dropout --display_id 0 --batchSize 8 --nThreads 10
 
 # TEST
 python test.py --dataroot ./datasets/maps --name <exp name> --model cycle_gan --phase test --no_dropout --which_model_netD fourier --fourier_mode=<which mode> [MORE OPTIONS]
-

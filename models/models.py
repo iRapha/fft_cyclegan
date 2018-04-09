@@ -17,6 +17,10 @@ def create_model(opt):
         assert(opt.dataset_mode == 'unaligned')
         from .recycle_gan_model import ReCycleGANModel
         model = ReCycleGANModel()
+    elif opt.model == 'tv_gan':
+        assert(opt.dataset_mode == 'unaligned')
+        from .tv_gan_model import TVCycleGANModel
+        model = TVCycleGANModel()
     else:
         raise ValueError("Model [%s] not recognized." % opt.model)
     model.initialize(opt)
