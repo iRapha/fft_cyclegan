@@ -58,6 +58,15 @@ python train.py --dataroot ./datasets/maps --name maps_cyclegan_resnet9_noskips 
 # ReCycleGAN (with resnet9 whose skips have stopgrad if cycleloss)
 python train.py --dataroot ./datasets/maps --name maps_cyclegan_recycleskips --model recycle_gan --no_dropout --display_id 0 --batchSize 4 --nThreads 6 --which_model_netG=resnet_9blocks_recycle_skips
 
+# ReCycleGAN (with resnet9 whose skips have stopgrad if cycleloss) small LA and LB
+python train.py --dataroot ./datasets/maps --name maps_cyclegan_recycleskips_LA1LB1 --model recycle_gan --no_dropout --display_id 0 --batchSize 4 --nThreads 6 --which_model_netG=resnet_9blocks_recycle_skips --lambda_A=1 --lambda_B=1
+
+# ReCycleGAN (with unet256 whose skips have stopgrad if cycleloss)
+python train.py --dataroot ./datasets/maps --name maps_cyclegan_unet_recycleskips --model recycle_gan --no_dropout --display_id 0 --batchSize 16 --nThreads 18 --which_model_netG=unet_256_recycle_skips
+
+# ReCycleGAN (with unet256 whose skips have stopgrad if cycleloss) small LA and LB
+python train.py --dataroot ./datasets/maps --name maps_cyclegan_unet_recycleskips_LA1LB1 --model recycle_gan --no_dropout --display_id 0 --batchSize 16 --nThreads 18 --which_model_netG=unet_256_recycle_skips --lambda_A=1 --lambda_B=1
+
 # TV GAN
 python train.py --dataroot ./datasets/maps --name maps_tv_test --model tv_gan --no_dropout --display_id 0 --batchSize 8 --nThreads 10
 
