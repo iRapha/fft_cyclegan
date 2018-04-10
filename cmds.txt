@@ -77,5 +77,8 @@ python train.py --dataroot ./datasets/maps --name maps_tv_test --model tv_gan --
 # TV GAN Mean, try 3
 python train.py --dataroot ./datasets/maps --name maps_tv_mean_v3 --model tv_gan --no_dropout --display_id 0 --batchSize 8 --nThreads 10 --lambda_tv_A 5e-6 --lambda_tv_B 5e-6
 
+# TV GAN Mean LTV = 1e-5 = 10e-6
+python train.py --dataroot ./datasets/maps --name maps_tv_mean_LTV10 --model tv_gan --no_dropout --display_id 0 --batchSize 4 --nThreads 6 --lambda_tv_A 1e-5 --lambda_tv_B 1e-5
+
 # TEST
 python test.py --dataroot ./datasets/maps --name <exp name> --model cycle_gan --phase test --no_dropout --which_model_netD fourier --fourier_mode=<which mode> [MORE OPTIONS]
