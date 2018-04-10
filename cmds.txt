@@ -70,5 +70,8 @@ python train.py --dataroot ./datasets/maps --name maps_cyclegan_unet_recycleskip
 # TV GAN
 python train.py --dataroot ./datasets/maps --name maps_tv_test --model tv_gan --no_dropout --display_id 0 --batchSize 8 --nThreads 10
 
+# TV GAN small LambdaTV
+python train.py --dataroot ./datasets/maps --name maps_tv_test --model tv_gan --no_dropout --display_id 0 --batchSize 8 --nThreads 10 --lambda_tv_A="1e-6" --lambda_tv_B="1e-6"
+
 # TEST
 python test.py --dataroot ./datasets/maps --name <exp name> --model cycle_gan --phase test --no_dropout --which_model_netD fourier --fourier_mode=<which mode> [MORE OPTIONS]
