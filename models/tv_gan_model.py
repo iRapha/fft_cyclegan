@@ -133,6 +133,9 @@ class TVCycleGANModel(BaseModel):
 
         lambda_tv_A = self.opt.lambda_tv_A
         lambda_tv_B = self.opt.lambda_tv_B
+        
+        self.desired_tv_A = self.opt.tv_A
+        self.desired_tv_B = self.opt.tv_B
 
 
         # Identity loss
@@ -173,8 +176,12 @@ class TVCycleGANModel(BaseModel):
         loss_cycle_B = self.criterionCycle(rec_B, self.real_B) * lambda_B
 
         # TV loss
-        tv_loss_A = TV(fake_A) * lambda_tv_A
-        tv_loss_B = TV(fake_B) * lambda_tv_B
+        # print(fake_A)
+        # print(fake_B)
+        # print(TV(fake_A))
+        # print(TV(fake_B))
+        tv_loss_A = torch.abs(TV(fake_A) - self.desired_tv_A) * lambda_tv_A
+        tv_loss_B = torch.abs(TV(fake_B) - self.desired_tv_B) * lambda_tv_B
         tv_loss = tv_loss_A + tv_loss_B
 
         # combined loss
@@ -212,7 +219,7 @@ class TVCycleGANModel(BaseModel):
     def get_current_errors(self):
         ret_errors = OrderedDict([('D_A', self.loss_D_A), ('G_A', self.loss_G_A), ('Cyc_A', self.loss_cycle_A),
                                   ('D_B', self.loss_D_B), ('G_B', self.loss_G_B), ('Cyc_B', self.loss_cycle_B),
-                                  ('tvA', self.tv_loss_A), ('tvB', self.tv_loss_B)])
+                                  ('TV_A', self.tv_loss_A), ('TV_B', self.tv_loss_B)])
         if self.opt.lambda_identity > 0.0:
             ret_errors['idt_A'] = self.loss_idt_A
             ret_errors['idt_B'] = self.loss_idt_B
