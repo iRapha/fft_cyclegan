@@ -68,10 +68,14 @@ python train.py --dataroot ./datasets/maps --name maps_cyclegan_unet_recycleskip
 python train.py --dataroot ./datasets/maps --name maps_cyclegan_unet_recycleskips_LA1LB1 --model recycle_gan --no_dropout --display_id 0 --batchSize 16 --nThreads 18 --which_model_netG=unet_256_recycle_skips --lambda_A=1 --lambda_B=1
 
 # TV GAN
+#trained to minimize overall tv loss with lambdas = 1e-5
 python train.py --dataroot ./datasets/maps --name maps_tv_test --model tv_gan --no_dropout --display_id 0 --batchSize 8 --nThreads 10
 
 # TV GAN small LambdaTV
 python train.py --dataroot ./datasets/maps --name maps_tv_test --model tv_gan --no_dropout --display_id 0 --batchSize 8 --nThreads 10 --lambda_tv_A="1e-6" --lambda_tv_B="1e-6"
+
+# TV GAN Mean, try 3
+python train.py --dataroot ./datasets/maps --name maps_tv_mean_v3 --model tv_gan --no_dropout --display_id 0 --batchSize 8 --nThreads 10 --lambda_tv_A 5e-6 --lambda_tv_B 5e-6
 
 # TEST
 python test.py --dataroot ./datasets/maps --name <exp name> --model cycle_gan --phase test --no_dropout --which_model_netD fourier --fourier_mode=<which mode> [MORE OPTIONS]
