@@ -22,6 +22,10 @@ def get_transform(opt):
         transform_list.append(transforms.RandomCrop(opt.fineSize))
     elif opt.resize_or_crop == 'crop':
         transform_list.append(transforms.RandomCrop(opt.fineSize))
+    elif opt.resize_or_crop == 'center_crop':
+        osize = [opt.loadSize, opt.loadSize]
+        transform_list.append(transforms.Scale(osize, Image.BICUBIC))
+        transform_list.append(transforms.CenterCrop(opt.fineSize))
     elif opt.resize_or_crop == 'scale_width':
         transform_list.append(transforms.Lambda(
             lambda img: __scale_width(img, opt.fineSize)))
