@@ -1,20 +1,8 @@
 import os
 import cv2
 import numpy as np
-from util.util import save_image
+from util.util import save_image, get_paths
 import argparse
-
-def get_paths(source, recurse=False):
-    paths = []
-    names = []
-    for _, _, filenames in os.walk(source):
-        for i, f in enumerate(filenames):
-            names.append(f)
-            paths.append(os.path.join(source, f))
-        if not recurse:
-            break
-
-    return paths, names
 
 def equalize_img(filename, clip=40):
     img = cv2.imread(filename,1)

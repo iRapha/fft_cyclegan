@@ -21,6 +21,13 @@ class TrainOptions(BaseOptions):
         self.parser.add_argument('--no_lsgan', action='store_true', help='do *not* use least square GAN, if false, use vanilla GAN')
         self.parser.add_argument('--lambda_A', type=float, default=10.0, help='weight for cycle loss (A -> B -> A)')
         self.parser.add_argument('--lambda_B', type=float, default=10.0, help='weight for cycle loss (B -> A -> B)')
+
+        self.parser.add_argument('--lambda_tv_A', type=float, default=1e-6, help='weight for tv loss of generated A')
+        self.parser.add_argument('--lambda_tv_B', type=float, default=1e-6, help='weight for tv loss of generated B')
+
+        self.parser.add_argument('--tv_A', type=float, default=81026, help='desired tv for fake As')
+        self.parser.add_argument('--tv_B', type=float, default=20251, help='desired tv for fake Bs')
+
         self.parser.add_argument('--lambda_identity', type=float, default=0.5,
                                  help='use identity mapping. Setting lambda_identity other than 0 has an effect of scaling the weight of the identity mapping loss.'
                                  'For example, if the weight of the identity loss should be 10 times smaller than the weight of the reconstruction loss, please set lambda_identity = 0.1')
