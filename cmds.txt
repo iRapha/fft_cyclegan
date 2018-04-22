@@ -93,7 +93,13 @@ python train.py --dataroot ./datasets/maps --name maps_cyclegan_tvmeanLTV100_nog
 python train.py --dataroot ./datasets/maps --name maps_cyclegan_trulynogrid --model cycle_gan --no_dropout --display_id 0 --batchSize 3 --which_model_netG=resnet_9blocks_trulynogrid
 
 # CycleGAN Truly No Grid Resnet LTV = 1e-4
-python train.py --dataroot ./datasets/maps --name maps_cyclegan_trulynogrid --model tv_gan --no_dropout --display_id 0 --batchSize 3 --which_model_netG=resnet_9blocks_trulynogrid --lambda_tv_A 1e-4 --lambda_tv_B 1e-4
+python train.py --dataroot ./datasets/maps --name maps_cyclegan_trulynogrid_tv --model tv_gan --no_dropout --display_id 0 --batchSize 3 --which_model_netG=resnet_9blocks_trulynogrid --lambda_tv_A 1e-4 --lambda_tv_B 1e-4
+
+# CycleGAN Truly No Grid and No Skips
+python train.py --dataroot ./datasets/maps --name maps_cyclegan_trulynogrid_noskips --model cycle_gan --no_dropout --display_id 0 --batchSize 3 --which_model_netG=resnet_9blocks_trulynogrid_noskips
 
 # TEST
-python test.py --dataroot ./datasets/maps --name <exp name> --model cycle_gan --phase test --no_dropout --which_model_netD fourier --fourier_mode=<which mode> [MORE OPTIONS]
+python test.py --dataroot ./datasets/maps --name <exp name> --model cycle_gan --phase test --no_dropout --which_model_netD fourier --fourier_mode=<which mode> [MORE OPTIONS] --resize_or_crop=center_crop --phase=test
+
+# TEST modifiedfakeB to recA again
+python test.py --dataroot ./datasets/maps --name <exp name> --model cycle_gan --phase test --no_dropout --which_model_netD fourier --fourier_mode=<which mode> [MORE OPTIONS] --resize_or_crop=none --phase=temp
