@@ -121,11 +121,11 @@ def get_diff(img1, img2, strategy='to255'):
         return np.array(to255(fromLab(np.concatenate((diff, a, b), axis=2))))
 
 if __name__ == '__main__':
-    fakeB_smoothest = np.array(Image.open('diff_vis/1005_A_rec_A_smoothest.png').convert('RGB'))
+    fakeB_smoothest = np.array(Image.open('diff_vis/fakeBto_fake_A.png').convert('RGB'))
     fakeB = np.array(Image.open('diff_vis/1005_A_rec_A.png').convert('RGB'))
 
-    cv2.imwrite('diff_vis/1005_A_rec_A_smoothest_normd.png', to255(fakeB_smoothest))
-    cv2.imwrite('diff_vis/1005_A_rec_A_normd.png', to255(fakeB))
+    #  cv2.imwrite('diff_vis/1005_A_rec_A_smoothest_normd.png', to255(fakeB_smoothest))
+    #  cv2.imwrite('diff_vis/1005_A_rec_A_normd.png', to255(fakeB))
 
 
     #  trans = get_transform(norm_255=True, just_norm=True)
@@ -135,6 +135,6 @@ if __name__ == '__main__':
     #  print(fakeB)
     #  print(np.array(trans(fakeB)))
 
-    cv2.imwrite('diff_vis/1005_A_rec_A_diff.png', get_diff(fakeB, fakeB_smoothest, strategy='justLaverageAB'))
+    cv2.imwrite('diff_vis/1005_A_rec_A_diff.png', get_diff(fakeB, fakeB_smoothest, strategy='to255'))
     #  cv2.waitKey(0)
     #  cv2.destroyAllWindows()

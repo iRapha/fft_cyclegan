@@ -1,0 +1,9 @@
+- train model
+- test.py phase test --resize_or_crop=center_crop [yields fakeB, recA]
+- transfer test_latest to mac
+- mask.py on 1005_fakeB [yields modFakeB]
+- transfer to beetle (maps/tempB)
+- test.py phase temp --resize_or_crop=none [yields modRecA]
+- transfer temp_latest to mac
+- ahe on fakeB and modFakeB [yields noiseFakeB, noiseModFakeB]
+- get_diff.py on recA and modRecA [yields diff]
