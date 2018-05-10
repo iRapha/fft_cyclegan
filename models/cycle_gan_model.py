@@ -98,6 +98,32 @@ class CycleGANModel(BaseModel):
         self.rec_B = self.netG_A(fake_A).data
         self.fake_A = fake_A.data
 
+    def adversarial(self, input_goal_A):
+        # here we do B to A because that's where interesting steg happens.
+        real_B = Variable(self.input_B) # we will optimize real_B
+        goal_A = Variable(input_goal_A) # to generate goal_A
+        optimizer_adv = SGD([real_B], lr=0.7)
+        num_iter = 500
+
+        for i in range(num_iter):
+            optimizer_adv.zero_grad()
+            fake_A = self.netG_B(real_B)
+            loss_adv = self.criterionCycle(fake_A, goal_A)
+            loss_adv.backward()
+            optimizer_adv.step()
+
+        real_A_vis = util.tensor2im(self.input_A)
+        real_B_vis = util.tensor2im(self.input_B)
+        advr_B_vis = util.tensor2im(real_B)
+        goal_A_vis = util.tensor2im(goal_A)
+        fake_advr_A_vis = util.tensor2im(fake_A)
+        fake_A_vis = util.tensor2im(self.netG_B(self.input_B))
+        ret_visuals = OrderedDict([('real_A', real_A_vis),
+            ('real_B', real_B_vis), ('advr_B', advr_B_vis),
+            ('goal_A', goal_B_vis), ('fake_advr_A', fake_advr_A_vis),
+            ('fake_A', fake_A_vis)])
+        return ret_visuals
+
     # get image paths
     def get_image_paths(self):
         return self.image_paths

@@ -41,7 +41,7 @@ python train.py --dataroot ./datasets/maps --name maps_purefullyfourierimagegan 
 python train.py --dataroot ./datasets/maps --name maps_variationalggan --model cycle_gan --no_dropout --display_id 0 --which_model_netG variational_resnet_9blocks --batchSize 4
 
 # CycleGAN no Identity
-alert python train.py --dataroot ./datasets/maps --name maps_cyclegan_noidentity --model cycle_gan --no_dropout --batchSize 10 --nThreads 12 --display_id 0 --lambda_identity 0; sudo shutdown -h now
+python train.py --dataroot ./datasets/maps --name maps_cyclegan_noidentity --model cycle_gan --no_dropout --batchSize 10 --nThreads 12 --display_id 0 --lambda_identity 0
 
 # CycleGAN with UNet256
 python train.py --dataroot ./datasets/maps --name maps_cyclegan_unet256 --model cycle_gan --no_dropout --display_id 0 --batchSize 16 --nThread 18 --which_model_netG=unet_256

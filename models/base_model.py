@@ -23,6 +23,10 @@ class BaseModel():
     def test(self):
         pass
 
+    # used in test time, backprops to input
+    def adversarial(self):
+        pass
+
     def get_image_paths(self):
         pass
 
