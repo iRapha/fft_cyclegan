@@ -20,15 +20,12 @@ web_dir = os.path.join(opt.results_dir, opt.name, '%s_%s' % (opt.phase, opt.whic
 webpage = html.HTML(web_dir, 'Experiment = %s, Phase = %s, Epoch = %s' % (opt.name, opt.phase, opt.which_epoch))
 
 # first, figure out which image is 1005_A:
-for i, data in enumerate(dataset):
-    if '1005' in data['A_paths']:
-        input_goal_A = data['A']
+input_goal_A = dataset.dataset.get_single('./datasets/maps/testA/1005_A.jpg', './datasets/maps/testB/1005_B.jpg')['A']
 
 # optimize 1005_B and 1018_B to reconstruct 1005_A.
-for i, data in enumerate(dataset):
-    if '1005' not in data['A_paths'] and '1018' not in data['A_paths']:
-        continue
-
+template = './datasets/maps/test{0}/{1}_{0}.jpg'
+for i, data_id in enumerate(['1005', '1018']):
+    data = dataset.dataset.get_single(template.format('A', data_id), template.format('B', data_id))
     model.set_input(data)
     visuals = model.adversarial(input_goal_A)
     img_path = model.get_image_paths()

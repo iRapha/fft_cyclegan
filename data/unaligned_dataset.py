@@ -51,6 +51,30 @@ class UnalignedDataset(BaseDataset):
         return {'A': A, 'B': B,
                 'A_paths': A_path, 'B_paths': B_path}
 
+    def get_single(self, A_path, B_path):
+        A_img = Image.open(A_path).convert('RGB')
+        B_img = Image.open(B_path).convert('RGB')
+
+        A = self.transform(A_img)
+        B = self.transform(B_img)
+        if self.opt.which_direction == 'BtoA':
+            input_nc = self.opt.output_nc
+            output_nc = self.opt.input_nc
+        else:
+            input_nc = self.opt.input_nc
+            output_nc = self.opt.output_nc
+
+        if input_nc == 1:  # RGB to gray
+            tmp = A[0, ...] * 0.299 + A[1, ...] * 0.587 + A[2, ...] * 0.114
+            A = tmp.unsqueeze(0)
+
+        if output_nc == 1:  # RGB to gray
+            tmp = B[0, ...] * 0.299 + B[1, ...] * 0.587 + B[2, ...] * 0.114
+            B = tmp.unsqueeze(0)
+
+        return {'A': A.unsqueeze(0), 'B': B.unsqueeze(0),
+                'A_paths': [A_path], 'B_paths': [B_path]}
+
     def __len__(self):
         return max(self.A_size, self.B_size)
 
