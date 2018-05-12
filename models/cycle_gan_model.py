@@ -100,34 +100,30 @@ class CycleGANModel(BaseModel):
 
     def adversarial(self, input_goal_A):
         # here we do B to A because that's where interesting steg happens.
-        real_B = Variable(self.input_B.clone().cuda()) # we will optimize real_B
-        steg = Variable(torch.Tensor(*real_B.size()).normal_(0, 1).cuda(), requires_grad=True)
+        real_B = Variable(self.input_B.clone().cuda(), requires_grad=True) # we will optimize real_B
         goal_A = Variable(input_goal_A.clone()).cuda() # to generate goal_A
-        optimizer_adv = torch.optim.SGD([steg], lr=0.7)
         criterionAdv = torch.nn.L1Loss()
         num_iter = 10
 
         for i in range(num_iter):
             print('{}/{}'.format(i, num_iter), end='\r')
-            optimizer_adv.zero_grad()
-
-            fake_A = self.netG_B(real_B + 0.007 * steg)
+            real_B.grad = None
+            fake_A = self.netG_B(real_B)
             loss_adv = criterionAdv(fake_A, goal_A)
             loss_adv.backward()
-            optimizer_adv.step()
+            real_B.data = real_B.data - (0.007 * torch.sign(real_B.grad.data))
         print('') # for the new line
 
         real_A_vis = util.tensor2im(self.input_A)
         real_B_vis = util.tensor2im(self.input_B)
-        advr_B_vis = util.tensor2im((real_B + 0.007 * steg).data)
+        advr_B_vis = util.tensor2im(real_B.data)
         goal_A_vis = util.tensor2im(goal_A.data)
         fake_advr_A_vis = util.tensor2im(fake_A.data)
         fake_A_vis = util.tensor2im(self.netG_B(Variable(self.input_B.cuda())).data)
-        steg_vis = util.tensor2im(steg.data)
         ret_visuals = OrderedDict([('real_A', real_A_vis),
             ('real_B', real_B_vis), ('advr_B', advr_B_vis),
             ('goal_A', goal_A_vis), ('fake_advr_A', fake_advr_A_vis),
-            ('fake_A', fake_A_vis), ('steg', steg_vis)])
+            ('fake_A', fake_A_vis)])
         return ret_visuals
 
     # get image paths
