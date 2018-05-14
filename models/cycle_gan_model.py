@@ -103,23 +103,23 @@ class CycleGANModel(BaseModel):
         real_B = Variable(self.input_B.clone().cuda()) # we will optimize real_B
         steg = Variable(torch.Tensor(*real_B.size()).normal_(0, 1).cuda(), requires_grad=True)
         goal_A = Variable(input_goal_A.clone()).cuda() # to generate goal_A
-        optimizer_adv = torch.optim.SGD([steg], lr=0.7)
+        optimizer_adv = torch.optim.SGD([steg], lr=0.7, weight_decay=0.0005)
         criterionAdv = torch.nn.L1Loss()
-        num_iter = 10
+        num_iter = 10000
 
         for i in range(num_iter):
             print('{}/{}'.format(i, num_iter), end='\r')
             optimizer_adv.zero_grad()
-
-            fake_A = self.netG_B(real_B + 0.007 * steg)
-            loss_adv = criterionAdv(fake_A, goal_A)
+            advr_B = (real_B + steg).clamp(min=0.0, max=1.0)
+            fake_A = self.netG_B(advr_B)
+            loss_adv = criterionAdv(fake_A, goal_A)# + criterionAdv(advr_B, real_B)
             loss_adv.backward()
             optimizer_adv.step()
         print('') # for the new line
 
         real_A_vis = util.tensor2im(self.input_A)
         real_B_vis = util.tensor2im(self.input_B)
-        advr_B_vis = util.tensor2im((real_B + 0.007 * steg).data)
+        advr_B_vis = util.tensor2im((real_B + steg).clamp(min=0.0, max=1.0).data)
         goal_A_vis = util.tensor2im(goal_A.data)
         fake_advr_A_vis = util.tensor2im(fake_A.data)
         fake_A_vis = util.tensor2im(self.netG_B(Variable(self.input_B.cuda())).data)
